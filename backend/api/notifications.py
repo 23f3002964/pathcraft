@@ -7,6 +7,7 @@ import uuid
 from ..models import models, schemas
 from ..database import get_db
 from ..core.auth import get_current_user
+from ..core.websocket_manager import manager # Import the WebSocket manager
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ def get_my_notifications(db: Session = Depends(get_db), current_user: models.Use
     return notifications
 
 @router.put("/notifications/{notification_id}/mark_sent", response_model=schemas.Notification)
-def mark_notification_sent(notification_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def mark_notification_sent(notification_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
     if db_notification is None:
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -36,4 +37,8 @@ def mark_notification_sent(notification_id: str, db: Session = Depends(get_db), 
     db_notification.is_sent = True
     db.commit()
     db.refresh(db_notification)
+    
+    # Send real-time notification (temporarily commented out for testing)
+        # await manager.send_personal_message(f"Notification sent: {db_notification.message}", manager.active_connections[0]) # For simplicity, send to first connected client
+
     return db_notification

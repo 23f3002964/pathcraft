@@ -1,4 +1,6 @@
+
 import datetime
+from typing import List, Dict
 from sqlalchemy.orm import Session
 from backend.models.models import Task # Import Task model
 from backend.core.prediction import predict_task_duration # Import prediction model
@@ -11,7 +13,7 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
 
     # Sort tasks by priority (lower number = higher priority)
     # Use predicted priority if available, otherwise fallback to manually set priority
-    tasks.sort(key=lambda task: predict_task_priority(task.description, task.planned_end, user_id=task.parent_sub_goal.parent_goal.owner_id) if task.planned_end else task.priority)
+    tasks.sort(key=lambda task: predict_task_priority(task.parent_sub_goal.description, task.planned_end, user_id=task.parent_sub_goal.parent_goal.owner_id) if task.planned_end and task.parent_sub_goal and task.parent_sub_goal.parent_goal else task.priority)
 
     # Convert existing calendar events to a more usable format (start, end datetime objects)
     if existing_calendar_events is None:
@@ -20,31 +22,35 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
     # Sort calendar events by start time
     existing_calendar_events.sort(key=lambda event: event['start'])
 
+    # Initialize the current scheduling pointer
+    current_scheduling_pointer = datetime.datetime.now().replace(hour=user_daily_start_hour, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+
     for task in tasks:
         # Check dependencies
         if task.dependencies:
             dependent_task_ids = [dep.strip() for dep in task.dependencies.split(',')]
+            all_dependencies_met = True
             for dep_id in dependent_task_ids:
                 dependent_task = db.query(Task).filter(Task.id == dep_id).first()
                 if dependent_task and dependent_task.status != 'done':
-                    # If a dependency is not done, skip this task for now
-                    # In a real system, this would involve more complex rescheduling or notification
+                    all_dependencies_met = False
                     print(f"Skipping task {task.id} due to unmet dependency {dep_id}")
-                    continue
+                    break
+            if not all_dependencies_met:
+                continue # Skip this task for now
 
-        # Ensure tasks stay within daily working hours and avoid calendar conflicts
-        current_attempt_start_time = start_time
         task_scheduled = False
+        attempt_start_time = current_scheduling_pointer # Start attempting from the current pointer
 
         while not task_scheduled:
-            # Adjust start_time to be within working hours
-            while current_attempt_start_time.hour < user_daily_start_hour or current_attempt_start_time.hour >= user_daily_end_hour:
-                if current_attempt_start_time.hour >= user_daily_end_hour:
-                    current_attempt_start_time = current_attempt_start_time + datetime.timedelta(days=1) # Move to next day
-                current_attempt_start_time = current_attempt_start_time.replace(hour=user_daily_start_hour, minute=0, second=0, microsecond=0)
+            # Adjust attempt_start_time to be within working hours
+            while attempt_start_time.hour < user_daily_start_hour or attempt_start_time.hour >= user_daily_end_hour:
+                if attempt_start_time.hour >= user_daily_end_hour:
+                    attempt_start_time = attempt_start_time + datetime.timedelta(days=1) # Move to next day
+                attempt_start_time = attempt_start_time.replace(hour=user_daily_start_hour, minute=0, second=0, microsecond=0)
 
-            duration_minutes = predict_task_duration(task.description, user_id=task.parent_sub_goal.parent_goal.owner_id) # Use predicted duration
-            current_attempt_end_time = current_attempt_start_time + datetime.timedelta(minutes=duration_minutes)
+            duration_minutes = predict_task_duration(task.parent_sub_goal.description, user_id=task.parent_sub_goal.parent_goal.owner_id) # Use predicted duration
+            attempt_end_time = attempt_start_time + datetime.timedelta(minutes=duration_minutes)
 
             # Check for conflicts with existing calendar events
             conflict_found = False
@@ -53,18 +59,19 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
                 event_end = event['end']
 
                 # Check for overlap
-                if (current_attempt_start_time < event_end and current_attempt_end_time > event_start):
+                if (attempt_start_time < event_end and attempt_end_time > event_start):
                     conflict_found = True
-                    # Move past the conflicting event
-                    current_attempt_start_time = event_end + datetime.timedelta(minutes=15) # Add a small buffer
+                    attempt_start_time = event_end + datetime.timedelta(minutes=15) # Move past the conflicting event
                     break
-            
+
             if not conflict_found:
-                task.planned_start = current_attempt_start_time
-                task.planned_end = current_attempt_end_time
+                task.planned_start = attempt_start_time
+                task.planned_end = attempt_end_time
                 scheduled_tasks.append(task)
-                start_time = current_attempt_end_time + datetime.timedelta(minutes=15) # Set next task's start time with a 15-minute break
+                current_scheduling_pointer = attempt_end_time + datetime.timedelta(minutes=15) # Update pointer for next task
                 task_scheduled = True
-            # If conflict found, loop continues to find next available slot
+            else:
+                # If conflict found, continue the while loop to find next available slot
+                pass # attempt_start_time was already updated to move past the conflict
 
     return scheduled_tasks

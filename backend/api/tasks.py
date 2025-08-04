@@ -2,9 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
+import datetime
 
 from ..models import models, schemas
 from ..database import get_db
+from ..core.auth import get_current_user
+from ..core.websocket_manager import manager # Import the WebSocket manager
 
 router = APIRouter()
 
@@ -33,10 +36,30 @@ def read_task(task_id: str, db: Session = Depends(get_db)):
 
 # Update a task
 @router.put("/tasks/{task_id}", response_model=schemas.Task)
-def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depends(get_db)):
+async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if status is changing to 'done'
+    if db_task.status != 'done' and task.status == 'done':
+        # Create a notification
+        notification_message = f"Task \"{db_task.id}\" marked as done!"
+        new_notification = models.Notification(
+            id=str(uuid.uuid4()),
+            user_id=current_user.id,
+            task_id=db_task.id,
+            message=notification_message,
+            notification_time=datetime.datetime.now(),
+            method="system" # Or 'push', 'email' etc.
+        )
+        db.add(new_notification)
+        db.flush() # Flush to get ID for refresh
+        db.refresh(new_notification)
+
+        # Send real-time notification (temporarily commented out for testing)
+            # await manager.send_personal_message(notification_message, manager.active_connections[0]) # For simplicity
+
     for key, value in task.dict().items():
         setattr(db_task, key, value)
     db.commit()
