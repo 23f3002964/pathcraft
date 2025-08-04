@@ -1,0 +1,118 @@
+/* PathCraft Design System - CSS Implementation */
+
+/* 1. Root Variables (from Design System) */
+:root {
+    --primary-text: #2d3748;
+    --secondary-text: #718096;
+    --background: #f7fafc;
+    --surface: #ffffff;
+    --border-color: #e2e8f0;
+    --accent: #4299e1;
+    --accent-hover: #2b6cb0;
+    --success: #48bb78;
+    --warning: #ed8936;
+    --error: #f56565;
+
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --h1-size: 2.25rem;
+    --h2-size: 1.5rem;
+    --h3-size: 1.25rem;
+    --body-size: 1rem;
+    --small-size: 0.875rem;
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+}
+
+/* 2. Global Styles */
+body {
+    margin: 0;
+    font-family: var(--font-family);
+    background-color: var(--background);
+    color: var(--primary-text);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: var(--spacing-xl);
+}
+
+#app-container {
+    width: 100%;
+    max-width: 420px; /* Mobile-first approach */
+    background-color: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.screen {
+    padding: var(--spacing-lg);
+    display: none; /* Hide all screens by default */
+}
+
+.screen.active {
+    display: block;
+}
+
+/* 3. Typography */
+h1, h2, h3 {
+    font-weight: 600;
+    margin-top: 0;
+}
+
+h1 { font-size: var(--h1-size); }
+h2 { font-size: var(--h2-size); }
+h3 { font-size: var(--h3-size); }
+
+p {
+    line-height: 1.6;
+    font-size: var(--body-size);
+    color: var(--secondary-text);
+}
+
+/* 4. Components */
+.btn {
+    display: block;
+    width: 100%;
+    padding: var(--spacing-md);
+    border: none;
+    border-radius: 8px;
+    font-size: var(--body-size);
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn-primary {
+    background-color: var(--accent);
+    color: var(--surface);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.bento-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+.card {
+    background-color: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: var(--spacing-md);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.card h3 {
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--h3-size);
+}
