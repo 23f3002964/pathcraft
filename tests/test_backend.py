@@ -1,16 +1,20 @@
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from unittest.mock import AsyncMock, patch, Mock
+
+# Mock the websocket manager before it's imported by the app
+from backend.core import websocket_manager
+mock_manager = AsyncMock()
+websocket_manager.manager = mock_manager
 
 from backend.main import app
 from backend.database import get_db
 from backend.models.models import Base, User, Goal, SubGoal, Task, Notification, RecurringTask, CalendarIntegration
 from backend.core.auth import get_password_hash
 import datetime
-import uuid # Added this import
-from unittest.mock import AsyncMock, patch # Added for mocking
+import uuid
 
 # Setup a test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -29,16 +33,10 @@ def session_fixture():
     db.close()
 
 @pytest.fixture(name="client")
-def client_fixture(session, monkeypatch):
+def client_fixture(session):
     def override_get_db():
         yield session
     app.dependency_overrides[get_db] = override_get_db
-
-    # Mock the WebSocket manager using monkeypatch
-    mock_manager = AsyncMock()
-    mock_manager.active_connections = [AsyncMock()] # Simulate a connected WebSocket
-    monkeypatch.setattr('backend.core.websocket_manager.manager', mock_manager)
-
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -142,6 +140,38 @@ def test_decompose_goal(client):
     )
     assert response.status_code == 200
     assert len(response.json()) > 0 # Expect sub-goals to be created
+
+def test_create_goal_limit(client):
+    token = get_test_user_token(client, email="free@example.com")
+
+    # Create 3 goals, which should be allowed
+    for i in range(3):
+        response = client.post(
+            "/api/goals/",
+            headers={
+                "Authorization": f"Bearer {token}"
+            },
+            json={
+                "title": f"Goal {i+1}",
+                "target_date": "2025-12-31T23:59:59",
+                "methodology": "SMART"
+            }
+        )
+        assert response.status_code == 200
+
+    # The 4th goal should be blocked
+    response = client.post(
+        "/api/goals/",
+        headers={
+            "Authorization": f"Bearer {token}"
+        },
+        json={
+            "title": "Goal 4",
+            "target_date": "2025-12-31T23:59:59",
+            "methodology": "SMART"
+        }
+    )
+    assert response.status_code == 403
 
 # --- SubGoal Tests ---
 def test_create_sub_goal(client):
@@ -356,7 +386,7 @@ def test_create_recurring_task(client):
         json={
             "user_id": user_id,
             "title": "Daily Standup",
-            "recurrence_type": "daily",
+            "rrule": "FREQ=DAILY",
             "start_date": "2025-08-05T09:00:00"
         }
     )
@@ -374,8 +404,7 @@ def test_generate_tasks_from_recurring(client):
         json={
             "user_id": user_id,
             "title": "Weekly Report",
-            "recurrence_type": "weekly",
-            "recurrence_value": 0, # Monday
+            "rrule": "FREQ=WEEKLY;BYDAY=MO", # Weekly on Monday
             "start_date": "2025-08-04T09:00:00" # Start from Monday
         }
     )
@@ -499,8 +528,7 @@ def test_goal_decomposition_and_scheduling_integration(client):
     sub_goal_id = sub_goals[0]["id"]
 
     # 3. Create a task for the sub-goal (with a dependency and priority)
-    task_id_1 = str(uuid.uuid4())
-    client.post(
+    task1_response = client.post(
         "/api/tasks/",
         headers={
             "Authorization": f"Bearer {token}"
@@ -514,9 +542,9 @@ def test_goal_decomposition_and_scheduling_integration(client):
             "dependencies": None
         }
     )
+    task_id_1 = task1_response.json()["id"]
 
-    task_id_2 = str(uuid.uuid4())
-    client.post(
+    task2_response = client.post(
         "/api/tasks/",
         headers={
             "Authorization": f"Bearer {token}"
@@ -530,6 +558,7 @@ def test_goal_decomposition_and_scheduling_integration(client):
             "dependencies": task_id_1
         }
     )
+    task_id_2 = task2_response.json()["id"]
 
     # 4. Add a calendar integration (conceptual)
     client.post(

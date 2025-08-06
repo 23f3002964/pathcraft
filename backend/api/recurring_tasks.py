@@ -1,9 +1,10 @@
-
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
 import datetime
+from dateutil.rrule import rrulestr
 
 from ..models import models, schemas
 from ..database import get_db
@@ -35,80 +36,45 @@ def generate_tasks_from_recurring(recurring_task_id: str, db: Session = Depends(
         raise HTTPException(status_code=403, detail="Not authorized to generate tasks for this recurring task")
 
     generated_tasks = []
-    today = datetime.date.today()
+    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
+    # Define a reasonable end date for generation (e.g., next 30 days)
+    generation_end_date = today + timedelta(days=30)
+
     # Helper to check if a task for a given recurring_task_id and date already exists
     def _task_exists(recurring_task_id, task_date):
         return db.query(models.Task).filter(
             models.Task.recurring_task_id == recurring_task_id,
-            models.Task.generated_date == task_date
+            models.Task.generated_date == task_date.date() # Compare only date part
         ).first() is not None
 
-    if db_recurring_task.recurrence_type == 'daily':
-        for i in range(7): # Generate for next 7 days
-            task_date = today + datetime.timedelta(days=i)
+    try:
+        # Parse the RRULE string
+        # rrule expects a dtstart, so we use the recurring task's start_date
+        # We also limit the generation to a reasonable number of occurrences
+        rule = rrulestr(db_recurring_task.rrule, dtstart=db_recurring_task.start_date)
+        
+        # Generate occurrences within the desired range
+        for dt in rule.between(today, generation_end_date, inc=True):
+            task_date = dt.replace(hour=9, minute=0, second=0, microsecond=0) # Default start time
+            
             if not _task_exists(db_recurring_task.id, task_date): # Prevent duplicates
                 new_task = models.Task(
                     id=str(uuid.uuid4()),
                     recurring_task_id=db_recurring_task.id,
-                    generated_date=task_date,
+                    generated_date=task_date.date(), # Store only date part
                     sub_goal_id=None, # Recurring tasks might not have a sub_goal_id initially
-                    planned_start=datetime.datetime.combine(task_date, datetime.time(9, 0)),
-                    planned_end=datetime.datetime.combine(task_date, datetime.time(10, 0)),
+                    planned_start=task_date,
+                    planned_end=task_date + timedelta(hours=1), # Default 1 hour duration
                     status='todo',
                     priority=0,
                     dependencies=None
                 )
                 db.add(new_task)
                 generated_tasks.append(new_task)
-    elif db_recurring_task.recurrence_type == 'weekly':
-        # recurrence_value: 0=Monday, 1=Tuesday, ..., 6=Sunday
-        for i in range(7): # Check next 7 days
-            task_date = today + datetime.timedelta(days=i)
-            if task_date.weekday() == db_recurring_task.recurrence_value:
-                if not _task_exists(db_recurring_task.id, task_date): # Prevent duplicates
-                    new_task = models.Task(
-                        id=str(uuid.uuid4()),
-                        recurring_task_id=db_recurring_task.id,
-                        generated_date=task_date,
-                        sub_goal_id=None,
-                        planned_start=datetime.datetime.combine(task_date, datetime.time(9, 0)),
-                        planned_end=datetime.datetime.combine(task_date, datetime.time(10, 0)),
-                        status='todo',
-                        priority=0,
-                        dependencies=None
-                    )
-                    db.add(new_task)
-                    generated_tasks.append(new_task)
-    elif db_recurring_task.recurrence_type == 'monthly':
-        # recurrence_value: day of the month (1-31)
-        # Generate for next 3 months
-        for i in range(3):
-            target_month = today.month + i
-            target_year = today.year
-            if target_month > 12:
-                target_month -= 12
-                target_year += 1
-            
-            try:
-                task_date = datetime.date(target_year, target_month, db_recurring_task.recurrence_value)
-                if task_date >= today: # Only generate for future dates
-                    if not _task_exists(db_recurring_task.id, task_date): # Prevent duplicates
-                        new_task = models.Task(
-                            id=str(uuid.uuid4()),
-                            recurring_task_id=db_recurring_task.id,
-                            generated_date=task_date,
-                            sub_goal_id=None,
-                            planned_start=datetime.datetime.combine(task_date, datetime.time(9, 0)),
-                            planned_end=datetime.datetime.combine(task_date, datetime.time(10, 0)),
-                            status='todo',
-                            priority=0,
-                            dependencies=None
-                        )
-                        db.add(new_task)
-                        generated_tasks.append(new_task)
-            except ValueError: # Day of month might not exist for all months
-                pass
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid RRULE: {e}")
     
     db.commit()
     for task in generated_tasks:

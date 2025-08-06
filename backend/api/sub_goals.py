@@ -34,6 +34,13 @@ def schedule_sub_goal_tasks(sub_goal_id: str, db: Session = Depends(get_db), cur
         events = sync_calendar_events(current_user.id, integration.provider, integration.access_token)
         all_calendar_events.extend(events)
 
+    # Fetch user's calendar integrations and sync events
+    calendar_integrations = db.query(models.CalendarIntegration).filter(models.CalendarIntegration.user_id == current_user.id).all()
+    all_calendar_events = []
+    for integration in calendar_integrations:
+        events = sync_calendar_events(current_user.id, integration.provider, integration.access_token)
+        all_calendar_events.extend(events)
+
     tasks_to_schedule = db_sub_goal.tasks
     scheduled_tasks = schedule_tasks(
         tasks_to_schedule,

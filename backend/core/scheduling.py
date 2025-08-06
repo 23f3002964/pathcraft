@@ -6,6 +6,7 @@ from backend.models.models import Task # Import Task model
 from backend.core.prediction import predict_task_duration # Import prediction model
 from backend.core.prioritization import predict_task_priority # Import prioritization model
 from backend.core.calendar_sync import sync_calendar_events # Import calendar sync
+from backend.ml.slot_optimizer import predict_slot_score # Import the new slot optimizer
 
 def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_daily_end_hour: int = 17, existing_calendar_events: List[Dict] = None):
     """Schedules a list of tasks considering their estimated effort, user availability, priority, and dependencies."""
@@ -39,10 +40,14 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
             if not all_dependencies_met:
                 continue # Skip this task for now
 
-        task_scheduled = False
-        attempt_start_time = current_scheduling_pointer # Start attempting from the current pointer
+        best_slot = None
+        best_score = -1
 
-        while not task_scheduled:
+        # Search for the best slot within a reasonable time window (e.g., next 7 days)
+        search_end_date = current_scheduling_pointer + datetime.timedelta(days=7)
+        attempt_start_time = current_scheduling_pointer
+
+        while attempt_start_time < search_end_date:
             # Adjust attempt_start_time to be within working hours
             while attempt_start_time.hour < user_daily_start_hour or attempt_start_time.hour >= user_daily_end_hour:
                 if attempt_start_time.hour >= user_daily_end_hour:
@@ -65,13 +70,21 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
                     break
 
             if not conflict_found:
-                task.planned_start = attempt_start_time
-                task.planned_end = attempt_end_time
-                scheduled_tasks.append(task)
-                current_scheduling_pointer = attempt_end_time + datetime.timedelta(minutes=15) # Update pointer for next task
-                task_scheduled = True
+                # Score the potential slot
+                score = predict_slot_score(attempt_start_time, attempt_end_time)
+                if score > best_score:
+                    best_score = score
+                    best_slot = (attempt_start_time, attempt_end_time)
+                
+                # Move to the next potential slot
+                attempt_start_time += datetime.timedelta(minutes=15) # Check every 15 minutes
             else:
                 # If conflict found, continue the while loop to find next available slot
                 pass # attempt_start_time was already updated to move past the conflict
+
+        if best_slot:
+            task.planned_start, task.planned_end = best_slot
+            scheduled_tasks.append(task)
+            current_scheduling_pointer = best_slot[1] + datetime.timedelta(minutes=15) # Update pointer for next task
 
     return scheduled_tasks

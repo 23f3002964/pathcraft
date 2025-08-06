@@ -57,8 +57,9 @@ async def update_task(task_id: str, task: schemas.TaskCreate, db: Session = Depe
         db.flush() # Flush to get ID for refresh
         db.refresh(new_notification)
 
-        # Send real-time notification (temporarily commented out for testing)
-            # await manager.send_personal_message(notification_message, manager.active_connections[0]) # For simplicity
+        # Send real-time notification
+            # Send real-time notification
+        await manager.send_personal_message(notification_message, current_user.id) # Send to specific user
 
     for key, value in task.dict().items():
         setattr(db_task, key, value)

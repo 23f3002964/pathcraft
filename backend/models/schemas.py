@@ -62,8 +62,7 @@ class RecurringTaskBase(BaseModel):
     user_id: str
     title: str
     description: Optional[str] = None
-    recurrence_type: str
-    recurrence_value: Optional[int] = None
+    rrule: str # Recurrence rule in iCalendar RRULE format
     start_date: datetime.datetime
     end_date: Optional[datetime.datetime] = None
 
@@ -126,4 +125,36 @@ class Goal(GoalBase):
     class Config:
         orm_mode = True
 
+# --- Team Schemas ---
+class TeamBase(BaseModel):
+    name: str
+
+class TeamCreate(TeamBase):
+    pass
+
+class Team(TeamBase):
+    id: str
+    owner_id: str
+    members: List['TeamMember'] = []
+    goals: List[Goal] = []
+
+    class Config:
+        orm_mode = True
+
+# --- TeamMember Schemas ---
+class TeamMemberBase(BaseModel):
+    user_id: str
+    role: str = "member"
+
+class TeamMemberCreate(TeamMemberBase):
+    pass
+
+class TeamMember(TeamMemberBase):
+    id: str
+    team_id: str
+
+    class Config:
+        orm_mode = True
+
 User.update_forward_refs()
+Team.update_forward_refs()

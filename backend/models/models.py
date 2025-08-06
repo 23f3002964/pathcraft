@@ -12,8 +12,33 @@ class User(Base):
     hashed_password = Column(String)
     daily_start_hour = Column(Integer, default=9) # Default 9 AM
     daily_end_hour = Column(Integer, default=17)   # Default 5 PM
+    tier = Column(String, default="free") # free, pro, enterprise
+    goal_limit = Column(Integer, default=3) # Default goal limit for free tier
 
     goals = relationship("Goal", back_populates="owner")
+    teams = relationship("TeamMember", back_populates="user")
+
+class Team(Base):
+    __tablename__ = 'teams'
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, index=True)
+    owner_id = Column(String, ForeignKey('users.id'))
+
+    owner = relationship("User", backref="owned_teams")
+    members = relationship("TeamMember", back_populates="team")
+    goals = relationship("Goal", back_populates="team")
+
+class TeamMember(Base):
+    __tablename__ = 'team_members'
+
+    id = Column(String, primary_key=True, index=True)
+    team_id = Column(String, ForeignKey('teams.id'))
+    user_id = Column(String, ForeignKey('users.id'))
+    role = Column(String, default="member") # member, admin
+
+    team = relationship("Team", back_populates="members")
+    user = relationship("User", back_populates="teams")
 
 class Goal(Base):
     __tablename__ = 'goals'
@@ -23,9 +48,12 @@ class Goal(Base):
     target_date = Column(DateTime)
     methodology = Column(String) # SMART, OKR, etc.
     owner_id = Column(String, ForeignKey('users.id'))
+    team_id = Column(String, ForeignKey('teams.id'), nullable=True)
 
     # Relationship to User
     owner = relationship("User", back_populates="goals")
+    # Relationship to Team
+    team = relationship("Team", back_populates="goals")
     # Relationship to SubGoal
     sub_goals = relationship("SubGoal", back_populates="parent_goal")
 
@@ -82,8 +110,7 @@ class RecurringTask(Base):
     user_id = Column(String, ForeignKey('users.id'))
     title = Column(String)
     description = Column(Text, nullable=True)
-    recurrence_type = Column(String) # e.g., 'daily', 'weekly', 'monthly'
-    recurrence_value = Column(Integer, nullable=True) # e.g., day of week for weekly, day of month for monthly
+    rrule = Column(String) # Stores recurrence rule in iCalendar RRULE format
     start_date = Column(DateTime)
     end_date = Column(DateTime, nullable=True)
     # Relationship to User

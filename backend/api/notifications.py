@@ -8,6 +8,7 @@ from ..models import models, schemas
 from ..database import get_db
 from ..core.auth import get_current_user
 from ..core.websocket_manager import manager # Import the WebSocket manager
+from ..ml.reminder_optimizer import get_reminder_frequency # Import the new reminder optimizer
 
 router = APIRouter()
 
@@ -15,6 +16,11 @@ router = APIRouter()
 def create_notification(notification: schemas.NotificationCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if notification.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to create notification for this user")
+    
+    # Get the reminder frequency from the optimizer
+    reminder_frequency = get_reminder_frequency(current_user.id)
+    notification.notification_time = datetime.datetime.now() + reminder_frequency
+
     db_notification = models.Notification(**notification.dict(), id=str(uuid.uuid4()))
     db.add(db_notification)
     db.commit()
@@ -38,7 +44,8 @@ async def mark_notification_sent(notification_id: str, db: Session = Depends(get
     db.commit()
     db.refresh(db_notification)
     
-    # Send real-time notification (temporarily commented out for testing)
-        # await manager.send_personal_message(f"Notification sent: {db_notification.message}", manager.active_connections[0]) # For simplicity, send to first connected client
+    # Send real-time notification
+        # Send real-time notification
+    await manager.send_personal_message(f"Notification sent: {db_notification.message}", current_user.id) # Send to specific user
 
     return db_notification

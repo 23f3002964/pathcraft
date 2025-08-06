@@ -13,6 +13,10 @@ router = APIRouter()
 # Create a new goal
 @router.post("/goals/", response_model=schemas.Goal)
 def create_goal(goal: schemas.GoalCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Check if the user has reached their goal limit
+    if current_user.tier == "free" and len(current_user.goals) >= current_user.goal_limit:
+        raise HTTPException(status_code=403, detail="Goal limit reached for free tier. Upgrade to create more goals.")
+
     goal_data = goal.dict()
     goal_data["owner_id"] = current_user.id
     db_goal = models.Goal(**goal_data, id=str(uuid.uuid4()))
