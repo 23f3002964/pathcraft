@@ -39,6 +39,10 @@ class Task(TaskBase):
     class Config:
         orm_mode = True
 
+class RescheduleTask(BaseModel):
+    planned_start: datetime.datetime
+    planned_end: datetime.datetime
+
 # --- Notification Schemas ---
 class NotificationBase(BaseModel):
     user_id: str

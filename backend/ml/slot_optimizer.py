@@ -1,15 +1,17 @@
 
 import datetime
+import json
+
+# Load the trained model
+with open('slot_optimizer_model.json', 'r') as f:
+    hourly_scores = json.load(f)
 
 def predict_slot_score(slot_start: datetime.datetime, slot_end: datetime.datetime) -> float:
     """
-    Placeholder for the ML model that predicts the optimality of a time slot.
-    In a real implementation, this would use a trained model to predict the score.
-    For now, it returns a simple score based on the time of day.
+    Predicts the optimality of a time slot using a trained model.
     """
-    # Higher score for slots during typical work hours (9am - 5pm)
-    if 9 <= slot_start.hour < 17:
-        return 0.8
-    # Lower score for slots outside of typical work hours
-    else:
-        return 0.3
+    # Get the hour of the day for the slot
+    hour = slot_start.hour
+
+    # Return the score for that hour from the trained model
+    return hourly_scores.get(str(hour), 0.1) # Default to a low score if the hour is not in the model
