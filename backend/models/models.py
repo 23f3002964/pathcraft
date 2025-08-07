@@ -84,6 +84,7 @@ class Task(Base):
     status = Column(String, default='todo') # todo, in-progress, done, skipped
     priority = Column(Integer, default=0) # Lower number = higher priority
     dependencies = Column(String, nullable=True) # Comma-separated task IDs
+    reminder_interval = Column(Integer, nullable=True) # Reminder interval in minutes
     reminder_policy_id = Column(String, nullable=True)
 
     # Relationship to SubGoal

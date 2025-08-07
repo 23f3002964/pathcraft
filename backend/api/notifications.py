@@ -18,8 +18,13 @@ def create_notification(notification: schemas.NotificationCreate, db: Session = 
         raise HTTPException(status_code=403, detail="Not authorized to create notification for this user")
     
     # Get the reminder frequency from the optimizer
-    reminder_frequency = get_reminder_frequency(current_user.id)
-    notification.notification_time = datetime.datetime.now() + reminder_frequency
+    reminder_frequency = get_reminder_frequency(notification.task_id)
+    
+    task = db.query(models.Task).filter(models.Task.id == notification.task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    notification.notification_time = task.planned_start - reminder_frequency
 
     db_notification = models.Notification(**notification.dict(), id=str(uuid.uuid4()))
     db.add(db_notification)

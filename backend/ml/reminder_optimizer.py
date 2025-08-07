@@ -1,12 +1,18 @@
 
 import datetime
+from ..database.database import get_db
+from ..models.models import Task
 
-def get_reminder_frequency(user_id: str) -> datetime.timedelta:
+def get_reminder_frequency(task_id: str) -> datetime.timedelta:
     """
-    Placeholder for the ML model that predicts the optimal reminder frequency for a user.
-    In a real implementation, this would use a trained model based on user behavior.
-    For now, it returns a fixed timedelta.
+    Gets the reminder frequency for a task.
+    If the user has set a custom reminder interval for the task, it returns that.
+    Otherwise, it returns the default reminder interval.
     """
-    # In the future, this could be personalized based on the user's habits.
-    # For example, if a user often snoozes reminders, send them earlier.
-    return datetime.timedelta(minutes=30) # Default to 30 minutes before the task
+    db = next(get_db())
+    task = db.query(Task).filter(Task.id == task_id).first()
+
+    if task and task.reminder_interval:
+        return datetime.timedelta(minutes=task.reminder_interval)
+    else:
+        return datetime.timedelta(minutes=30) # Default to 30 minutes before the task
