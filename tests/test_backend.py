@@ -195,9 +195,10 @@ def test_create_sub_goal(client):
             "Authorization": f"Bearer {token}"
         },
         json={
-            "parent_goal_id": goal_id,
+            "goal_id": goal_id,
+            "title": "Test Sub-goal",
             "description": "Sub-goal description",
-            "estimated_effort_minutes": 120
+            "target_date": "2025-12-31T23:59:59"
         }
     )
     assert response.status_code == 200
@@ -225,9 +226,10 @@ def test_create_task(client):
             "Authorization": f"Bearer {token}"
         },
         json={
-            "parent_goal_id": goal_id,
+            "goal_id": goal_id,
+            "title": "Test Sub-goal for Task",
             "description": "Test Sub-goal for Task",
-            "estimated_effort_minutes": 60
+            "target_date": "2025-12-31T23:59:59"
         }
     )
     sub_goal_id = create_sub_goal_response.json()["id"]
@@ -270,9 +272,10 @@ def test_schedule_tasks(client):
             "Authorization": f"Bearer {token}"
         },
         json={
-            "parent_goal_id": goal_id,
+            "goal_id": goal_id,
+            "title": "Sub-goal for scheduling",
             "description": "Sub-goal for scheduling",
-            "estimated_effort_minutes": 30
+            "target_date": "2025-12-31T23:59:59"
         }
     )
     sub_goal_id = create_sub_goal_response.json()["id"]

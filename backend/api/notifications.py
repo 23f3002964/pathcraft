@@ -7,8 +7,8 @@ import uuid
 from ..models import models, schemas
 from ..database import get_db
 from ..core.auth import get_current_user
-from ..core.websocket_manager import manager # Import the WebSocket manager
-from ..ml.reminder_optimizer import get_reminder_frequency # Import the new reminder optimizer
+from ..core.websocket_manager import manager
+from ..ml.reminder_optimizer import get_reminder_frequency
 
 router = APIRouter()
 
@@ -17,14 +17,13 @@ def create_notification(notification: schemas.NotificationCreate, db: Session = 
     if notification.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to create notification for this user")
     
-    # Get the reminder frequency from the optimizer
-    reminder_frequency = get_reminder_frequency(notification.task_id)
-    
-    task = db.query(models.Task).filter(models.Task.id == notification.task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    notification.notification_time = task.planned_start - reminder_frequency
+    # If a task is provided, adjust the notification_time relative to task start
+    if notification.task_id:
+        reminder_frequency = get_reminder_frequency(notification.task_id)
+        task = db.query(models.Task).filter(models.Task.id == notification.task_id).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        notification.notification_time = task.planned_start - reminder_frequency
 
     db_notification = models.Notification(**notification.dict(), id=str(uuid.uuid4()))
     db.add(db_notification)
@@ -50,7 +49,6 @@ async def mark_notification_sent(notification_id: str, db: Session = Depends(get
     db.refresh(db_notification)
     
     # Send real-time notification
-        # Send real-time notification
-    await manager.send_personal_message(f"Notification sent: {db_notification.message}", current_user.id) # Send to specific user
+    await manager.send_personal_message(f"Notification sent: {db_notification.message}", current_user.id)
 
     return db_notification

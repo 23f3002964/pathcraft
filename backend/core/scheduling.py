@@ -86,5 +86,9 @@ def schedule_tasks(tasks, db: Session, user_daily_start_hour: int = 9, user_dail
             task.planned_start, task.planned_end = best_slot
             scheduled_tasks.append(task)
             current_scheduling_pointer = best_slot[1] + datetime.timedelta(minutes=15) # Update pointer for next task
+        else:
+            # If no better slot was found, keep the task's existing plan if present
+            if task.planned_start and task.planned_end:
+                scheduled_tasks.append(task)
 
     return scheduled_tasks

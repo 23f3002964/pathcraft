@@ -4,5 +4,12 @@ sqlalchemy
 psycopg2-binary
 pydantic
 passlib[bcrypt]
-jose
+python-jose[cryptography]
 python-multipart
+python-dateutil
+httpx
+starlette
+scikit-learn
+numpy
+pandas
+reportlab

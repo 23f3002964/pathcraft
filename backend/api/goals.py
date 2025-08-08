@@ -26,29 +26,31 @@ def create_goal(goal: schemas.GoalCreate, db: Session = Depends(get_db), current
     return db_goal
 
 # Decompose a goal and create sub-goals
-@router.post("/goals/{goal_id}/decompose/", response_model=List[schemas.SubGoal])
-def decompose_goal_endpoint(goal_id: str, context: str = None, db: Session = Depends(get_db)):
-    db_goal = db.query(models.Goal).filter(models.Goal.id == goal_id).first()
-    if db_goal is None:
+@router.post("/goals/{goal_id}/decompose", response_model=List[schemas.SubGoal])
+def decompose_goal_endpoint(goal_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Decompose a goal into sub-goals using AI/rule-based logic."""
+    # Check if the goal exists and belongs to the user
+    goal = db.query(models.Goal).filter(models.Goal.id == goal_id, models.Goal.owner_id == current_user.id).first()
+    if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    sub_goal_descriptions = decompose_goal_ml_enhanced(db_goal.title, context=context)
-    created_sub_goals = []
-    for desc in sub_goal_descriptions:
+    # Use the decomposition logic to create sub-goals
+    sub_goals_data = decompose_goal_ml_enhanced(goal.title, goal.methodology)
+    
+    sub_goals = []
+    for sub_goal_data in sub_goals_data:
         sub_goal = models.SubGoal(
             id=str(uuid.uuid4()),
-            parent_goal_id=goal_id,
-            description=desc,
-            estimated_effort_minutes=60 # Placeholder value
+            goal_id=goal_id,
+            title=sub_goal_data["title"],
+            description=sub_goal_data["description"],
+            target_date=goal.target_date
         )
         db.add(sub_goal)
-        created_sub_goals.append(sub_goal)
+        sub_goals.append(sub_goal)
     
     db.commit()
-    for sub_goal in created_sub_goals:
-        db.refresh(sub_goal)
-
-    return created_sub_goals
+    return sub_goals
 
 # Get all goals
 @router.get("/goals/", response_model=List[schemas.Goal])

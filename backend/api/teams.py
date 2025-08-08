@@ -46,3 +46,95 @@ def get_my_teams(db: Session = Depends(get_db), current_user: models.User = Depe
     team_memberships = db.query(models.TeamMember).filter(models.TeamMember.user_id == current_user.id).all()
     teams = [membership.team for membership in team_memberships]
     return teams
+
+@router.get("/teams/{team_id}", response_model=schemas.Team)
+def get_team(team_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Get a specific team by ID."""
+    # Check if user is a member of the team
+    team_membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id, 
+        models.TeamMember.user_id == current_user.id
+    ).first()
+    if not team_membership:
+        raise HTTPException(status_code=403, detail="Not a member of this team")
+    
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    return team
+
+@router.get("/teams/{team_id}/members", response_model=List[schemas.TeamMember])
+def get_team_members(team_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Get all members of a team."""
+    # Check if user is a member of the team
+    team_membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id, 
+        models.TeamMember.user_id == current_user.id
+    ).first()
+    if not team_membership:
+        raise HTTPException(status_code=403, detail="Not a member of this team")
+    
+    members = db.query(models.TeamMember).filter(models.TeamMember.team_id == team_id).all()
+    return members
+
+@router.put("/teams/{team_id}", response_model=schemas.Team)
+def update_team(team_id: str, team_update: schemas.TeamCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Update team information (only team owner can do this)."""
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    if team.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only team owner can update team")
+    
+    for key, value in team_update.dict().items():
+        setattr(team, key, value)
+    
+    db.commit()
+    db.refresh(team)
+    return team
+
+@router.delete("/teams/{team_id}")
+def delete_team(team_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Delete a team (only team owner can do this)."""
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    if team.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only team owner can delete team")
+    
+    # Delete all team members first
+    db.query(models.TeamMember).filter(models.TeamMember.team_id == team_id).delete()
+    # Delete the team
+    db.delete(team)
+    db.commit()
+    return {"message": "Team deleted successfully"}
+
+@router.delete("/teams/{team_id}/members/{user_id}")
+def remove_team_member(team_id: str, user_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Remove a member from the team (only team admins can do this)."""
+    # Check if the current user is an admin of the team
+    current_membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id, 
+        models.TeamMember.user_id == current_user.id
+    ).first()
+    if not current_membership or current_membership.role != "admin":
+        raise HTTPException(status_code=403, detail="Only team admins can remove members")
+    
+    # Check if the user to be removed is a member
+    member_to_remove = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id, 
+        models.TeamMember.user_id == user_id
+    ).first()
+    if not member_to_remove:
+        raise HTTPException(status_code=404, detail="User is not a member of this team")
+    
+    # Prevent removing the team owner
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if team.owner_id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot remove team owner")
+    
+    db.delete(member_to_remove)
+    db.commit()
+    return {"message": "Member removed successfully"}

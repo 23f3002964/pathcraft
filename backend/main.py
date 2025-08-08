@@ -1,44 +1,28 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
-from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+import uuid
 
 from .database import engine, get_db
 from .models import models
-from .api import goals, sub_goals, tasks, users, notifications, recurring_tasks, calendar_integration # Import the new routers
-from .core.websocket_manager import manager # Import the WebSocket manager
-from .core.auth import SECRET_KEY, ALGORITHM # Import for token validation
+from .core.websocket_manager import manager
+from .api import goals, sub_goals, tasks, users, notifications, recurring_tasks, calendar_integration, teams, team_okrs, user_preferences, learning_platforms
 
-# Create the database tables
+# Create database tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="PathCraft API", version="1.0.0")
 
-# OAuth2 scheme for WebSocket authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Dependency to get current user from WebSocket token
-async def get_websocket_current_user(websocket: WebSocket, token: str): # token is passed via query param
-    credentials_exception = WebSocketDisconnect("Could not validate credentials")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    db = next(get_db()) # Get a new DB session for this dependency
-    user = db.query(models.User).filter(models.User.email == email).first()
-    db.close()
-    if user is None:
-        raise credentials_exception
-    return user
-
-# Include the routers
-app.include_router(users.router, prefix="/api", tags=["users"])
-app.include_router(goals.router, prefix="/api", tags=["goals"])
-app.include_router(sub_goals.router, prefix="/api", tags=["sub_goals"])
-from .api import goals, sub_goals, tasks, users, notifications, recurring_tasks, calendar_integration # Import the new routers
+# Include all routers
 app.include_router(users.router, prefix="/api", tags=["users"])
 app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(sub_goals.router, prefix="/api", tags=["sub_goals"])
@@ -46,38 +30,31 @@ app.include_router(tasks.router, prefix="/api", tags=["tasks"])
 app.include_router(notifications.router, prefix="/api", tags=["notifications"])
 app.include_router(recurring_tasks.router, prefix="/api", tags=["recurring_tasks"])
 app.include_router(calendar_integration.router, prefix="/api", tags=["calendar_integration"])
-app.include_router(notifications.router, prefix="/api", tags=["notifications"])
-app.include_router(recurring_tasks.router, prefix="/api", tags=["recurring_tasks"])
-app.include_router(calendar_integration.router, prefix="/api", tags=["calendar_integration"])
+app.include_router(teams.router, prefix="/api", tags=["teams"])
+app.include_router(team_okrs.router, prefix="/api", tags=["team_okrs"])
+app.include_router(user_preferences.router, prefix="/api", tags=["user_preferences"])
+app.include_router(learning_platforms.router, prefix="/api", tags=["learning_platforms"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the PathCraft API"}
+    return {"message": "Welcome to PathCraft API"}
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: str = None):
-    user = None
-    if token:
-        try:
-            user = await get_websocket_current_user(websocket, token)
-        except WebSocketDisconnect:
-            print("WebSocket authentication failed.")
-            return # Do not accept connection if auth fails
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
-    if user:
-        await manager.connect(user.id, websocket)
-    else:
-        # Handle unauthenticated WebSocket connections if necessary
-        # For now, we'll just close it or not accept it
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str, db: Session = Depends(get_db)):
+    await manager.connect(websocket, user_id)
     try:
         while True:
             data = await websocket.receive_text()
-            # You can process received data here if needed
-            # await manager.send_personal_message(f"You said: {data}", user.id)
+            # Handle incoming messages if needed
+            await manager.send_personal_message(f"Message received: {data}", user_id)
     except WebSocketDisconnect:
-        if user:
-            manager.disconnect(user.id)
-        print("Client disconnected")
+        manager.disconnect(websocket, user_id)
+        await manager.send_personal_message("Client disconnected", user_id)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        manager.disconnect(websocket, user_id)
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)

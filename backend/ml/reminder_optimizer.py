@@ -1,14 +1,16 @@
-
 import datetime
-from ..database.database import get_db
+from ..database import get_db
 from ..models.models import Task
 
-def get_reminder_frequency(task_id: str) -> datetime.timedelta:
+def get_reminder_frequency(task_id: str | None) -> datetime.timedelta:
     """
     Gets the reminder frequency for a task.
     If the user has set a custom reminder interval for the task, it returns that.
     Otherwise, it returns the default reminder interval.
     """
+    if not task_id:
+        return datetime.timedelta(minutes=30)
+
     db = next(get_db())
     task = db.query(Task).filter(Task.id == task_id).first()
 
