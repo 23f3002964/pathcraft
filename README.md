@@ -1,161 +1,333 @@
+# PathCraft: AI-Powered Goal Decomposition & Smart Scheduling Platform 🚀
 
-# PathCraft: AI-Powered Goal Decomposition & Scheduling App
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-PathCraft is an AI-powered productivity platform that helps users break down big goals, schedule tasks intelligently, and stay on track with adaptive reminders. It supports both individual and team productivity, with a vision for deep integrations and smart coaching.
+**PathCraft** is an intelligent productivity platform that leverages AI and machine learning to help users break down complex goals into manageable tasks, optimize scheduling, and maintain motivation through adaptive reminders. Built with a modern Python backend and featuring advanced ML algorithms for personalized productivity optimization.
 
----
+## 🌟 Key Features
 
-## 🚀 Project Vision
+### 🎯 **Smart Goal Management**
+- **AI-Powered Decomposition**: Automatically break down large goals into actionable sub-goals and tasks
+- **Hierarchical Organization**: Multi-level goal structure with parent-child relationships
+- **Progress Tracking**: Visual progress indicators and milestone management
 
-Empower users to achieve complex goals by:
-- Decomposing goals into actionable sub-goals and tasks
-- Scheduling tasks optimally using AI
-- Providing adaptive reminders and notifications
-- Supporting team OKRs and integrations with popular platforms
+### ⏰ **Intelligent Scheduling**
+- **ML-Based Optimization**: Machine learning algorithms analyze user behavior patterns
+- **Adaptive Scheduling**: Learn from productivity patterns to suggest optimal time slots
+- **Conflict Resolution**: Smart conflict detection and resolution with existing calendar events
+- **Priority-Based Allocation**: Automatically prioritize tasks based on deadlines and importance
 
----
+### 🔔 **Smart Notifications & Reminders**
+- **Behavioral Learning**: Adapts reminder timing based on user response patterns
+- **Multi-Channel Delivery**: Email, push notifications, and calendar integration
+- **Context-Aware**: Sends reminders when users are most likely to be productive
 
-## 🗂️ Project Structure
+### 👥 **Team Collaboration**
+- **OKR Management**: Set and track team objectives and key results
+- **Role-Based Access**: Granular permissions for team members
+- **Progress Sharing**: Real-time updates and collaborative goal tracking
 
-- `backend/` — FastAPI application for all core services (API, DB, scheduling, notifications, etc.)
-- `frontend/` — Flutter mobile app (UI, widgets, user flows)
-- `ml/` — Machine learning models and scripts for scheduling and reminders
-- `database/` — Database schemas and Alembic migrations
-- `tests/` — Automated backend tests (pytest, FastAPI TestClient)
-- `wireframes/` — UI/UX design docs and wireframes
-- `prototype/` — Early web prototype (HTML/JS/CSS)
+### 📊 **Analytics & Insights**
+- **Productivity Metrics**: Track completion rates, focus time, and efficiency
+- **Pattern Recognition**: Identify optimal working hours and productivity windows
+- **Performance Reports**: Detailed analytics for continuous improvement
 
----
+## 🏗️ Architecture Overview
 
-## ✨ Key Features
+```
+PathCraft/
+├── backend/                 # FastAPI Backend Server
+│   ├── api/                # REST API Endpoints
+│   ├── core/               # Core Business Logic
+│   ├── ml/                 # Machine Learning Models
+│   ├── models/             # Database Models & Schemas
+│   └── database.py         # Database Configuration
+├── frontend/               # Frontend Components (Flutter/Dart)
+├── ml/                     # ML Training & Models
+├── prototype/              # HTML/CSS/JS Prototype
+├── tests/                  # Test Suite
+└── database/               # Database Migrations
+```
 
-### Implemented
-- **Goal Management:** Create, decompose, and manage goals, sub-goals, and tasks
-- **Freemium Model:** Free users limited to 3 active goals
-- **Intelligent Scheduling (Placeholder):** Suggests optimal time slots for tasks
-- **Adaptive Reminders (Placeholder):** Suggests reminder frequency for tasks
-- **Notifications:** Email and push notifications for tasks and reminders
-- **Recurring Tasks:** Support for daily/weekly recurring tasks
-- **Calendar Integrations:** Google/Outlook calendar integration endpoints
-- **Comprehensive API Tests:** Automated tests for all major backend endpoints
+### **Backend Architecture**
+- **FastAPI**: High-performance async web framework
+- **SQLAlchemy**: ORM for database operations
+- **Pydantic**: Data validation and serialization
+- **WebSocket**: Real-time communication for live updates
 
-### Planned / In Progress
-- **Full AI Scheduling:** ML model predicts best time slots based on user behavior
-- **Full Adaptive Reminders:** ML model personalizes reminders
-- **Team Features:** Team OKRs, shared goals, Slack/Teams bots
-- **Learning Platform Integrations:** HR/learning platform sync
-- **Wearable & Contextual Integrations:** Biofeedback, location, AR vision board
-- **Generative Chat Coach:** AI chat for productivity coaching
+### **Machine Learning Components**
+- **Enhanced Scheduler**: Random Forest-based scheduling optimization
+- **Reminder Optimizer**: Behavioral pattern learning for optimal notification timing
+- **Slot Optimizer**: Time slot recommendation engine
+- **User Behavior Analysis**: Pattern recognition for productivity optimization
 
----
+## 🚀 Quick Start
 
-## 🛠️ Setup & Run Instructions
+### Prerequisites
 
-### 1. Backend (FastAPI)
+- **Python 3.10+** ([Download](https://www.python.org/downloads/))
+- **Git** ([Download](https://git-scm.com/downloads))
+- **Virtual Environment** (recommended)
 
-**Requirements:** Python 3.10+, pip
+### 1. Clone the Repository
 
-**Install dependencies:**
-```sh
+```bash
+git clone https://github.com/your-username/pathcraft.git
+cd pathcraft
+```
+
+### 2. Set Up Python Environment
+
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+# Install backend dependencies
 pip install -r backend/requirements.txt
-pip install python-multipart pytest
+
+# Install development dependencies
+pip install pytest pytest-asyncio httpx
 ```
 
-**Environment:**
-- Copy `.env.example` to `.env` in the project root and fill in secrets (if needed)
+### 4. Database Setup
 
-**Run the server:**
-```sh
-uvicorn backend.main:app --reload
+```bash
+# The application will automatically create SQLite database
+# For production, you can configure PostgreSQL in database.py
 ```
-The API will be available at `http://127.0.0.1:8000`.
 
-**Database:**
-- Uses SQLite by default (`pathcraft.db` for app, `test.db` for tests)
-- Alembic migrations in `database/migrations/`
+### 5. Run the Backend Server
 
-**API Reference:**
-- See `backend/API_REFERENCE.md` for endpoints
+```bash
+# Start the FastAPI server
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-### 2. Frontend (Flutter)
+Your API will be available at:
+- **API Documentation**: http://localhost:8000/docs
+- **Alternative Docs**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
 
-**Requirements:** Flutter SDK, Dart
+### 6. Run the Prototype Frontend
 
-**Setup:**
-- Navigate to `frontend/` and run:
-	```sh
-	flutter pub get
-	flutter run
-	```
-- The main app code is in `frontend/lib/`
+```bash
+# Open prototype/index.html in your browser
+# Or serve it with a simple HTTP server:
+python -m http.server 8080
+# Then visit: http://localhost:8080/prototype/
+```
 
-### 3. Machine Learning (ML)
+## 🧪 Testing
 
-**Requirements:** Python 3.10+, pip, scikit-learn, pandas, etc.
-
-**Setup:**
-- Navigate to `ml/` and install any extra requirements as needed
-- Scripts for training and data generation are in `ml/`
-
----
-
-## 🧪 Running Tests
-
-### Backend Tests
-From the project root:
-```sh
+```bash
+# Run all tests
 pytest
-```
-or to run a specific test file:
-```sh
+
+# Run tests with coverage
+pytest --cov=backend
+
+# Run specific test file
 pytest tests/test_backend.py
+
+# Run tests with verbose output
+pytest -v
 ```
-Tests use a temporary SQLite database (`test.db`).
 
-### Frontend & ML Tests
-- (Planned) Add tests for Flutter and ML modules
+## 📚 API Documentation
 
----
+### Core Endpoints
 
-## 📦 Environment & Files
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/users/` | POST | User registration |
+| `/api/token` | POST | User authentication |
+| `/api/goals/` | GET/POST | Goal management |
+| `/api/sub_goals/` | GET/POST | Sub-goal management |
+| `/api/tasks/` | GET/POST | Task management |
+| `/api/teams/` | GET/POST | Team management |
+| `/api/notifications/` | GET/POST | Notification system |
 
-- `.env`, `.db`, and other sensitive/generated files are git-ignored (see `.gitignore`)
-- Virtual environments (`.venv/`, `env/`) and IDE files are ignored
+### Authentication
 
----
+All protected endpoints require Bearer Token authentication:
+
+```bash
+curl -H "Authorization: Bearer <your_token>" \
+     http://localhost:8000/api/goals/
+```
+
+### Example API Usage
+
+```bash
+# Create a new user
+curl -X POST "http://localhost:8000/api/users/" \
+     -H "Content-Type: application/json" \
+     -d '{"email": "user@example.com", "password": "securepassword"}'
+
+# Login and get token
+curl -X POST "http://localhost:8000/api/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=user@example.com&password=securepassword"
+
+# Create a goal
+curl -X POST "http://localhost:8000/api/goals/" \
+     -H "Authorization: Bearer <your_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Learn Machine Learning", "target_date": "2024-12-31", "methodology": "Online courses and projects"}'
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Database Configuration
+DATABASE_URL=sqlite:///./pathcraft.db
+# For PostgreSQL: postgresql://user:password@localhost/pathcraft
+
+# Security
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# ML Model Paths
+SCHEDULER_MODEL_PATH=enhanced_scheduler_model.pkl
+REMINDER_MODEL_PATH=reminder_optimizer_model.pkl
+
+# External Services
+CALENDAR_API_KEY=your-calendar-api-key
+SLACK_WEBHOOK_URL=your-slack-webhook-url
+```
+
+### Database Configuration
+
+The application supports both SQLite (development) and PostgreSQL (production):
+
+```python
+# backend/database.py
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./pathcraft.db")
+```
+
+## 🚀 Deployment
+
+### Production Setup
+
+1. **Install Production Dependencies**
+   ```bash
+   pip install gunicorn uvicorn[standard]
+   ```
+
+2. **Configure Environment Variables**
+   ```bash
+   export DATABASE_URL="postgresql://user:password@localhost/pathcraft"
+   export SECRET_KEY="your-production-secret-key"
+   ```
+
+3. **Run with Gunicorn**
+   ```bash
+   gunicorn backend.main:app -w 4 -k uvicorn.workers.UvicornWorker
+   ```
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
 
 ## 🤝 Contributing
 
-1. Fork and clone the repo
-2. Create a new branch for your feature/fix
-3. Add tests for new features
-4. Open a pull request with a clear description
+We welcome contributions! Please follow these steps:
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Commit your changes**: `git commit -m 'Add amazing feature'`
+4. **Push to the branch**: `git push origin feature/amazing-feature`
+5. **Open a Pull Request**
+
+### Development Guidelines
+
+- Follow PEP 8 style guidelines
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
+
+## 📁 Project Structure Details
+
+### Backend Components
+
+- **`api/`**: REST API endpoints for all features
+- **`core/`**: Core business logic and algorithms
+- **`ml/`**: Machine learning models and training scripts
+- **`models/`**: Database models and Pydantic schemas
+- **`database.py`**: Database connection and session management
+
+### Frontend Components
+
+- **`frontend/lib/widgets/`**: Flutter/Dart UI components
+- **`prototype/`**: HTML/CSS/JS prototype for rapid testing
+
+### Machine Learning
+
+- **`ml/enhanced_scheduler.py`**: AI-powered scheduling optimization
+- **`ml/reminder_optimizer.py`**: Smart reminder timing
+- **`ml/slot_optimizer.py`**: Time slot recommendation engine
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Error**
+   - Ensure SQLite file has write permissions
+   - Check database path in `database.py`
+
+2. **Import Errors**
+   - Verify virtual environment is activated
+   - Check Python path and dependencies
+
+3. **Port Already in Use**
+   - Change port: `uvicorn backend.main:app --port 8001`
+   - Kill existing process: `lsof -ti:8000 | xargs kill -9`
+
+### Getting Help
+
+- Check the [API Reference](backend/API_REFERENCE.md)
+- Review test files for usage examples
+- Open an issue on GitHub with detailed error information
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- FastAPI community for the excellent web framework
+- SQLAlchemy for robust database operations
+- Scikit-learn for machine learning capabilities
+- All contributors who help improve PathCraft
 
 ---
 
-## 🛟 Troubleshooting
+**Ready to transform your productivity? Start with PathCraft today! 🚀**
 
-- If you see `ModuleNotFoundError` for `backend`, set `PYTHONPATH` to the project root:
-	```sh
-	set PYTHONPATH=%cd%  # Windows
-	export PYTHONPATH=$(pwd)  # macOS/Linux
-	```
-- If you see `RuntimeError: Form data requires "python-multipart"`, install it:
-	```sh
-	pip install python-multipart
-	```
-- For database errors, delete `test.db` and rerun tests
-
----
-
-## 📄 Documentation
-
-- See `wireframes/` for UI/UX docs
-- See `backend/API_REFERENCE.md` for API details
-- See `implementation_log.pdf` for implementation notes
-
----
-
-## License
-
-MIT License (see `LICENSE` file)
+For questions, support, or contributions, please open an issue or reach out to our team.
